@@ -3,7 +3,9 @@
 <head>
 <meta charset="utf-8">
 <title>Phrase Generator</title>
+
 <script src="qrc:///qtwebchannel/qwebchannel.js"></script>
+
 <style>
     body {
         font-family: sans-serif;
@@ -11,130 +13,455 @@
         color: #222;
         background: #fff;
     }
-    h2 { margin-top: 0; }
+
+    h2 {
+        margin-top: 0;
+    }
+
     .grid {
         display: grid;
         grid-template-columns: 180px 1fr;
         gap: 12px 14px;
         align-items: start;
     }
+
     label {
         font-weight: 600;
         padding-top: 8px;
     }
-    input, select, textarea, button {
+
+    input,
+    select,
+    textarea,
+    button {
         font: inherit;
         box-sizing: border-box;
     }
-    input, select, textarea {
+
+    input,
+    select,
+    textarea {
         width: 100%;
         padding: 8px;
         border: 1px solid #aaa;
         border-radius: 4px;
     }
-    textarea { min-height: 75px; resize: vertical; }
+
+    textarea {
+        min-height: 75px;
+        resize: vertical;
+    }
+
     .hint {
         grid-column: 2;
         color: #666;
         font-size: 0.9em;
         margin-top: -6px;
     }
+
     .actions {
         margin-top: 18px;
         display: flex;
         justify-content: flex-end;
     }
+
     button {
         padding: 9px 18px;
         cursor: pointer;
     }
 </style>
 </head>
+
 <body>
+
 <h2>Phrase Generator</h2>
 
 <div class="grid">
+
+    <!-- Generate by -->
     <label for="generateBy">Generate by</label>
-    <select id="generateBy">
+
+    <select id="generateBy" onchange="updateTargetField()">
         <option value="word">Word</option>
         <option value="term">Term</option>
         <option value="chunk">Chunk</option>
-        <option value="grammar rule" selected>Grammar rule</option>
+        <option value="grammar rule" selected>Grammar Rule</option>
     </select>
 
-    <label for="grammarRule">Grammar rule / target</label>
-    <input id="grammarRule" placeholder="e.g. Present Perfect">
 
-    <label for="amount">Amount of phrases</label>
-    <input id="amount" type="number" min="1" max="100" value="10">
+    <!-- Dynamic target field -->
+    <label id="targetLabel" for="targetField">
+        Grammar rule
+    </label>
 
-    <label for="subjectsMode">Subjects / context</label>
-    <select id="subjectsMode" onchange="updateSubjects()">
-        <option value="AI choice" selected>Not specified — AI choice</option>
-        <option value="Pre-computed list">Pre-computed list</option>
-        <option value="User context">Type a new / specific context</option>
+    <div id="targetContainer">
+        <select id="targetField">
+            <!-- Filled by JavaScript -->
+        </select>
+    </div>
+
+
+    <!-- Amount -->
+    <label for="amount">
+        Amount of phrases
+    </label>
+
+    <input
+        id="amount"
+        type="number"
+        min="1"
+        max="100"
+        value="10"
+    >
+
+
+    <!-- Subjects -->
+    <label for="subjectsMode">
+        Subjects / context
+    </label>
+
+    <select
+        id="subjectsMode"
+        onchange="updateSubjects()"
+    >
+        <option value="AI choice" selected>
+            Not specified — AI choice
+        </option>
+
+        <option value="Pre-computed list">
+            Pre-computed list
+        </option>
+
+        <option value="User context">
+            Type a new / specific context
+        </option>
     </select>
 
-    <label for="subjects">Subjects</label>
-    <textarea id="subjects" placeholder="e.g. small talk, work, programming"></textarea>
-    <div class="hint">For a pre-computed list, separate subjects with commas or lines.</div>
 
-    <label for="phraseSize">Phrase size</label>
+    <!-- Subject input -->
+    <label for="subjects">
+        Subjects
+    </label>
+
+    <textarea
+        id="subjects"
+        placeholder="e.g. small talk, work, programming"
+    ></textarea>
+
+    <div class="hint">
+        For a pre-computed list, separate subjects with commas or lines.
+    </div>
+
+
+    <!-- Phrase size -->
+    <label for="phraseSize">
+        Phrase size
+    </label>
+
     <select id="phraseSize">
-        <option value="S — up to 3 words">S — up to 3 words</option>
-        <option value="M — 3–5 words" selected>M — 3–5 words</option>
-        <option value="L — 5–7 words">L — 5–7 words</option>
+        <option value="S — up to 3 words">
+            S — up to 3 words
+        </option>
+
+        <option value="M — 3–5 words" selected>
+            M — 3–5 words
+        </option>
+
+        <option value="L — 5–7 words">
+            L — 5–7 words
+        </option>
     </select>
 
-    <label for="examples">Examples</label>
-    <textarea id="examples" placeholder="Add example sentences here..."></textarea>
-    <div class="hint">Reference examples for the AI. The generated phrases should be new.</div>
 
-    <label for="blacklist">Blacklist</label>
-    <textarea id="blacklist" placeholder="Terms or expressions to avoid..."></textarea>
+    <!-- Examples -->
+    <label for="examples">
+        Examples
+    </label>
+
+    <textarea
+        id="examples"
+        placeholder="Add example sentences here..."
+    ></textarea>
+
+    <div class="hint">
+        Reference examples for the AI. The generated phrases should be new.
+    </div>
+
+
+    <!-- Blacklist -->
+    <label for="blacklist">
+        Blacklist
+    </label>
+
+    <textarea
+        id="blacklist"
+        placeholder="Terms or expressions to avoid..."
+    ></textarea>
+
 </div>
+
 
 <div class="actions">
-    <button onclick="generate()">Compose prompt</button>
+
+    <button onclick="generate()">
+        Compose prompt
+    </button>
+
 </div>
 
+
 <script>
+
 let bridge = null;
 
-new QWebChannel(qt.webChannelTransport, function(channel) {
-    bridge = channel.objects.bridge;
-});
 
-function updateSubjects() {
-    const mode = document.getElementById("subjectsMode").value;
-    const field = document.getElementById("subjects");
-    field.disabled = mode === "AI choice";
-    if (mode === "AI choice") field.value = "";
-    field.placeholder =
-        mode === "Pre-computed list"
-        ? "e.g. work, travel, family, programming"
-        : "e.g. small talk about work";
-}
+/*
+ * Pre-computed grammar rules.
+ *
+ * These are internal data for the first version.
+ * Later this list can be moved to a separate JSON/Python file.
+ */
+const grammarRules = [
 
-function generate() {
-    if (!bridge) {
-        alert("The application bridge is not ready.");
+    // Verb Tenses
+    "Present Simple",
+    "Present Continuous",
+    "Past Simple",
+    "Past Continuous",
+    "Present Perfect",
+    "Present Perfect Continuous",
+    "Past Perfect",
+    "Past Perfect Continuous",
+    "Future with will",
+    "Future with going to",
+    "Future Continuous",
+    "Future Perfect",
+
+    // Modal Verbs
+    "Can",
+    "Could",
+    "May",
+    "Might",
+    "Must",
+    "Should",
+
+    // Verb Structures
+    "Imperatives",
+    "Gerunds",
+    "Infinitives",
+    "Used to",
+    "Would for past habits",
+    "Have to",
+    "Be able to",
+
+    // Nouns & Determiners
+    "Countable and uncountable nouns",
+    "Articles: a, an and the",
+    "Zero article",
+    "Some and any",
+    "Much and many",
+    "Few and little",
+
+    // Pronouns
+    "Subject pronouns",
+    "Object pronouns",
+    "Possessive adjectives",
+    "Possessive pronouns",
+    "Reflexive pronouns",
+
+    // Adjectives & Adverbs
+    "Comparative adjectives",
+    "Superlative adjectives",
+    "Adverbs of frequency",
+    "Adverbs of manner",
+    "Adverbs of degree",
+
+    // Prepositions
+    "Prepositions of time",
+    "Prepositions of place",
+    "Prepositions of movement",
+    "Common verb + preposition combinations",
+
+    // Sentence Structure
+    "There is and there are",
+    "Question formation",
+    "Negative sentences",
+    "Conditional sentences"
+];
+
+
+new QWebChannel(
+    qt.webChannelTransport,
+    function(channel) {
+        bridge = channel.objects.bridge;
+    }
+);
+
+
+/*
+ * Change the target field according to
+ * the selected "Generate by" option.
+ */
+function updateTargetField() {
+
+    const generateBy =
+        document.getElementById("generateBy").value;
+
+    const label =
+        document.getElementById("targetLabel");
+
+    const container =
+        document.getElementById("targetContainer");
+
+
+    /*
+     * Grammar Rule
+     * ----------------
+     * Show a <select>.
+     */
+    if (generateBy === "grammar rule") {
+
+        label.textContent = "Grammar rule";
+
+        container.innerHTML = `
+            <select id="targetField">
+                ${grammarRules.map(rule => `
+                    <option value="${escapeHtml(rule)}">
+                        ${escapeHtml(rule)}
+                    </option>
+                `).join("")}
+            </select>
+        `;
+
         return;
     }
 
+
+    /*
+     * Word / Term / Chunk
+     * -------------------
+     * Show a text input.
+     */
+    label.textContent =
+        generateBy.charAt(0).toUpperCase()
+        + generateBy.slice(1);
+
+    container.innerHTML = `
+        <input
+            id="targetField"
+            type="text"
+            placeholder="Type a ${generateBy}..."
+        >
+    `;
+}
+
+
+/*
+ * Small HTML escaping helper.
+ */
+function escapeHtml(value) {
+
+    return value
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+}
+
+
+/*
+ * Enable / disable the subject input
+ * according to the selected mode.
+ */
+function updateSubjects() {
+
+    const mode =
+        document.getElementById("subjectsMode").value;
+
+    const field =
+        document.getElementById("subjects");
+
+
+    field.disabled =
+        mode === "AI choice";
+
+
+    if (mode === "AI choice") {
+        field.value = "";
+    }
+
+
+    if (mode === "Pre-computed list") {
+
+        field.placeholder =
+            "e.g. work, travel, family, programming";
+
+    } else {
+
+        field.placeholder =
+            "e.g. small talk about work";
+    }
+}
+
+
+/*
+ * Compose the prompt.
+ */
+function generate() {
+
+    if (!bridge) {
+
+        alert(
+            "The application bridge is not ready."
+        );
+
+        return;
+    }
+
+
+    const generateBy =
+        document.getElementById("generateBy").value;
+
+
+    const targetField =
+        document.getElementById("targetField");
+
+
+    const target =
+        targetField.value;
+
+
     bridge.generate_prompt(
-        document.getElementById("generateBy").value,
-        document.getElementById("grammarRule").value,
+
+        generateBy,
+
+        target,
+
         document.getElementById("amount").value,
+
         document.getElementById("subjectsMode").value,
+
         document.getElementById("subjects").value,
+
         document.getElementById("phraseSize").value,
+
         document.getElementById("examples").value,
+
         document.getElementById("blacklist").value
     );
 }
 
+
+/*
+ * Initialize the correct field when
+ * the window opens.
+ */
+updateTargetField();
+
 updateSubjects();
+
 </script>
+
 </body>
 </html>

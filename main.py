@@ -122,24 +122,46 @@ class PhraseGeneratorDialog(QDialog):
         ]
 
         if grammar_rule.strip():
-            lines.append(f"Target grammar/content: {grammar_rule.strip()}.")
+            if generate_by == "grammar rule":
+                lines.append(
+                    f"Target grammar rule: {grammar_rule.strip()}."
+                )
+            else:
+                lines.append(
+                    f"Target {generate_by}: {grammar_rule.strip()}."
+                )
 
         if subjects_mode == "AI choice":
-            lines.append("Choose varied, natural everyday contexts yourself.")
+
+            lines.append(
+                "Choose varied, natural everyday contexts yourself."
+            )
+
         elif subjects_mode == "Pre-computed list":
-            lines.append(f"Use subjects/contexts from this list: {subjects.strip()}")
+
+            lines.append(
+                f"Use subjects/contexts from this list: {subjects.strip()}"
+            )
+
         else:
+
             if subjects.strip():
-                lines.append(f"Use this context/topic: {subjects.strip()}.")
+
+                lines.append(
+                    f"Use this context/topic: {subjects.strip()}."
+                )
 
         size_map = {
             "S — up to 3 words": "up to 3 words",
             "M — 3–5 words": "3–5 words",
             "L — 5–7 words": "5–7 words",
         }
-        lines.append(f"Sentence size: {size_map.get(phrase_size, phrase_size)}.")
 
-        # Internal rules: always applied and not exposed as user options.
+        lines.append(
+            f"Sentence size: {size_map.get(phrase_size, phrase_size)}."
+        )
+
+        # Internal rules: always applied.
         lines += [
             "",
             "Internal generation rules:",
@@ -150,6 +172,7 @@ class PhraseGeneratorDialog(QDialog):
         ]
 
         if examples.strip():
+
             lines += [
                 "",
                 "Examples/reference sentences:",
@@ -158,6 +181,7 @@ class PhraseGeneratorDialog(QDialog):
             ]
 
         if blacklist.strip():
+
             lines += [
                 "",
                 "Blacklist:",

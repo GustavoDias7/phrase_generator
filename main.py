@@ -164,11 +164,10 @@ class PhraseGeneratorDialog(QDialog):
         # Internal rules: always applied.
         lines += [
             "",
-            "Internal generation rules:",
-            "- Balance pronouns across the generated sentences when practical.",
-            "- Balance sentence forms across affirmative, negative, and interrogative forms when practical.",
-            "- Output the result in the Anki card format specified by the application.",
-            "- Prefer natural, useful, everyday English over artificial textbook sentences.",
+            "Rules:",
+            "- Balance pronouns across the generated sentences.",
+            "- Balance affirmative, negative, and interrogative forms.",
+            "- Prefer natural, useful, everyday English."
         ]
 
         if examples.strip():
@@ -191,7 +190,19 @@ class PhraseGeneratorDialog(QDialog):
 
         lines += [
             "",
-            "Return only the generated Anki cards, without explanations.",
+            "- Output only Markdown cards using this exact format:",
+            "---",
+            "Card",
+            "Front:",
+            "English phrase",
+            "Back:",
+            "Brazilian Portuguese translation",
+            "---",
+            "- Use --- as the card separator.",
+            "- Keep each field / item on its own line.",
+            "- No explanations or code fences.",
+            "- No formatting or styling."
+            "- Do not number the cards.",
         ]
 
         return "\n".join(lines)
